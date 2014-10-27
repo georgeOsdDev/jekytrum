@@ -1,0 +1,19 @@
+- import jekytrum.action._
+
+!!! 5
+html
+  head
+    != antiCsrfMeta
+    != xitrumCss
+
+    meta(content="text/html; charset=utf-8" http-equiv="content-type")
+    title My new Xitrum project
+
+    link(rel="shortcut icon" href={publicUrl("favicon.ico")})
+
+    link(type="text/css" rel="stylesheet" media="all" href={webJarsUrl("bootstrap/3.2.0/css", "bootstrap.css", "bootstrap.min.css")})
+    link(type="text/css" rel="stylesheet" media="all" href={publicUrl("app.css")})
+
+  body
+    .container
+      != renderedView
