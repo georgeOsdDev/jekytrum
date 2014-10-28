@@ -1,0 +1,1 @@
+[![Screen Shot](whale.png)](http://georgeosddev.github.com/markdown-edit)

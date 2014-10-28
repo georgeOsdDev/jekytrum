@@ -6,23 +6,26 @@ import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.{ Failure, Success }
-
 import xitrum.Log
-
+import xitrum.util.FileMonitor
 import jekytrum.Config
 
-case class Entry(title: String, body: String, createdAt: Long, updatedAt: Long, tags: List[String])
+case class Entry(title: String, body: String, lastModified: Long, tags: List[String])
 
 object Entry {
 
   // @TODO move lookup table to cache engine for clustering usage
   private val lookup = MMap.empty[String, Entry]
-  private val entry404 = new Entry("404", "404 Not Found", 0L, 0L, List.empty)
-  private val entry500 = new Entry("500", "500 System Error", 0L, 0L, List.empty)
+  private val entry404 = new Entry("404", "404 Not Found", 0L, List.empty)
+  private val entry500 = new Entry("500", "500 System Error", 0L, List.empty)
+  private val srcDir = if (Config.jekytrum.srcDir.startsWith("/"))
+    new File(Config.jekytrum.srcDir.drop(1))
+  else
+    new File(Config.jekytrum.srcDir)
 
   def load() = {
     Log.debug("Convert source markdown files with " + Config.jekytrum.converter.getClass)
-    getMarkdownSources(Config.jekytrum.srcDir).foreach { file =>
+    getMarkdownSources(srcDir).foreach { file =>
       val key = trimExt(file.toString.drop(Config.jekytrum.srcDir.length + 1))
       val name = file.getName
       val title = trimExt(name)
@@ -34,11 +37,28 @@ object Entry {
           Log.warn(s"Failed to convert:${key}")
           lookup(key) = entry500
         case Success(Some(htmlString)) =>
-          val entry = new Entry(title, htmlString, 0L, 0L, List.empty)
+          val entry = new Entry(title, htmlString, file.lastModified, List.empty)
           lookup(key) = entry
       }
       logEntries(key)
     }
+    watch
+  }
+
+  private def watch() {
+    Log.info(s"Start monitoring source directory: ${srcDir.toPath}")
+    FileMonitor.monitorRecursive(FileMonitor.MODIFY, srcDir.toPath, { path =>
+      val file = path.toFile
+      if (filterMarkdown(file)) {
+        Log.info(s"Entry changed: ${file}")
+        updateOrInsert(file)
+      }
+      if (file.isDirectory) {
+        Log.info(s"Directory changed: ${file}")
+        FileMonitor.unmonitorRecursive(FileMonitor.MODIFY, srcDir.toPath)
+        FileMonitor.monitorRecursive(FileMonitor.MODIFY, srcDir.toPath)
+      }
+    })
   }
 
   def getByKey(key: String): Entry = {
@@ -46,6 +66,26 @@ object Entry {
       case Some(entry) => entry
       case None        => tryIndex(key)
     }
+  }
+
+  private def updateOrInsert(file: File) {
+    val key = trimExt(file.toString.drop(Config.jekytrum.srcDir.length + 1))
+    val name = file.getName
+    val title = trimExt(name)
+    val exisiting = lookup.isDefinedAt(key)
+    Config.jekytrum.converter.convert(file).onComplete {
+      case Failure(e) =>
+        Log.warn(s"Failed to convert:${key}", e)
+        if (!exisiting) lookup(key) = entry500
+      case Success(None) =>
+        Log.warn(s"Failed to convert:${key}")
+        if (!exisiting) lookup(key) = entry500
+      case Success(Some(htmlString)) =>
+        val entry = new Entry(title, htmlString, file.lastModified, List.empty)
+        lookup(key) = entry
+    }
+
+    logEntries(key, exisiting)
   }
 
   // index fallback
@@ -61,27 +101,32 @@ object Entry {
     }
   }
 
-  private def logEntries(key: String) {
-    Log.info(s"Entry found: - ${key}")
-  }
-
   private def trimExt(path: String): String = {
     path.substring(0, path.lastIndexOf('.'))
   }
 
-  private def getMarkdownSources(srcDir: String): Seq[File] = {
-    val targetDir = if (srcDir.startsWith("/")) new File(srcDir.drop(1)) else new File(srcDir)
-    ls(targetDir).filter(f =>
-      !f.isDirectory && (
-        f.getPath.endsWith(".md") ||
-        f.getPath.endsWith(".markdown") ||
-        f.getPath.endsWith(".MD") ||
-        f.getPath.endsWith(".MARKDOWN")))
+  private def getMarkdownSources(srcDir: File): Seq[File] = {
+    ls(srcDir).filter(filterMarkdown)
+  }
+
+  private def filterMarkdown(f: File): Boolean = {
+    !f.isDirectory && (
+      f.getPath.endsWith(".md") ||
+      f.getPath.endsWith(".markdown") ||
+      f.getPath.endsWith(".MD") ||
+      f.getPath.endsWith(".MARKDOWN"))
   }
 
   private def ls(file: File): Seq[File] = {
     val files = file.listFiles
     files ++ files.filter(_.isDirectory).flatMap(ls)
+  }
+
+  private def logEntries(key: String, update: Boolean = false) {
+    if (update)
+      Log.info(s"Entry updated: - ${key}")
+    else
+      Log.info(s"Entry found: - ${key}")
   }
 
 }

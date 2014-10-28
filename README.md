@@ -14,14 +14,16 @@ Simple static site generator.
 ### TODOs:
 
   * Implement basic features.
-   * read and compile markdown in async with Akka
-   * livereload with file monitor
-   * Add created_at/updated_at
-   * list entries at index page
-   * tags
    * :white_check_mark: routing with directory tree.
+   * :white_check_mark: compile markdown in async with Future
+   * :white_check_mark: Add lastModified
+   * livereload with file monitor
+   * list entries at index page
    * theme/style
    * i18n
+   * next,prev utility
+   * tags
+   * Embed elastic search
   * Tune xitrum
    * remove unused pipeline handler
    * load content at handler

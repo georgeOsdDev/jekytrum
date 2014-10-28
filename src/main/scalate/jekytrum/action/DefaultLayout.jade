@@ -4,7 +4,6 @@
 !!! 5
 html
   head
-    != antiCsrfMeta
     != xitrumCss
 
     meta(content="text/html; charset=utf-8" http-equiv="content-type")
@@ -20,6 +19,5 @@ html
       != renderedView
 
     .footer
-      p = "createdAt:" + entry.createdAt
-      p = "updatedAt:" + entry.updatedAt
+      p = "lastModified:" + entry.lastModified
       p = "tags:" + entry.tags
