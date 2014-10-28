@@ -39,6 +39,7 @@ object Entry {
         case Success(Some(htmlString)) =>
           val entry = new Entry(title, htmlString, file.lastModified, List.empty)
           lookup(key) = entry
+          watchDelete(file)
       }
       logEntries(key)
     }
@@ -60,6 +61,20 @@ object Entry {
       }
     })
   }
+  
+  private def watchDelete(entry: File) {
+    println("watch on delete"+entry)
+    // @TODO delete event does not fire?
+    FileMonitor.monitorRecursive(FileMonitor.DELETE, entry.toPath, { path =>
+      Log.info(s"Entry removed: ${entry}")
+      delete(entry)
+    })
+  }
+  
+  private def delete(file: File) {
+    val key = trimExt(file.toString.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
+    lookup.remove(key)
+  }
 
   def getByKey(key: String): Entry = {
     lookup.get(key) match {
@@ -69,23 +84,27 @@ object Entry {
   }
 
   private def updateOrInsert(file: File) {
-    val key = trimExt(file.toString.drop(Config.jekytrum.srcDir.length + 1))
+    val key = trimExt(file.toString.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
     val name = file.getName
     val title = trimExt(name)
-    val exisiting = lookup.isDefinedAt(key)
+    val existing = lookup.isDefinedAt(key)
+    if (existing && lookup(key).lastModified == file.lastModified) {
+      return
+    }
+
     Config.jekytrum.converter.convert(file).onComplete {
       case Failure(e) =>
         Log.warn(s"Failed to convert:${key}", e)
-        if (!exisiting) lookup(key) = entry500
+        if (!existing) lookup(key) = entry500
       case Success(None) =>
         Log.warn(s"Failed to convert:${key}")
-        if (!exisiting) lookup(key) = entry500
+        if (!existing) lookup(key) = entry500
       case Success(Some(htmlString)) =>
         val entry = new Entry(title, htmlString, file.lastModified, List.empty)
         lookup(key) = entry
+        if (!existing) watchDelete(file)
     }
-
-    logEntries(key, exisiting)
+    logEntries(key, existing)
   }
 
   // index fallback
