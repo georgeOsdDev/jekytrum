@@ -9,9 +9,6 @@ object Boot {
 
     // @TODO
     // Start ElasticSearch node
-    // Start File monitor
-    // Start File reader actor
-    // Start File converter actor
 
     Entry.load
     Server.start()

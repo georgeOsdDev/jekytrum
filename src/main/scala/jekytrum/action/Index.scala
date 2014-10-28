@@ -1,7 +1,9 @@
 package jekytrum.action
 
-import xitrum.annotation.{ CacheActionMinute, GET, Last }
-
+import java.io.File
+import xitrum.annotation.{ CacheActionMinute, GET, First, Last }
+import xitrum.Action
+import jekytrum.Config
 import jekytrum.model.Entry
 
 @CacheActionMinute(5)
@@ -36,15 +38,50 @@ class EntryIndex extends RootIndex {
 }
 
 @CacheActionMinute(5)
+@Last
 @GET("/:parent/:*")
-class SubEntryIndex extends RootIndex {
+class SubEntryIndex extends RootIndex with Tokenizer {
   override def execute() {
-    val keys = toknize(List(param("parent")), paramo("*"))
+    val keys = tokenize(List(param("parent")), paramo("*"))
     val key = keys.mkString("/")
     respondEntry(Entry.getByKey(removeMarkdownExt(key)))
   }
+}
 
-  private def toknize(parent: List[String], children: Option[String]): List[String] = {
+@CacheActionMinute(5)
+@First
+@GET("""/:image<*.(jpg|JPG|jpeg|JPEG|gif|GIF|png|PNG|bmp|BMP)$>""")
+class ImageIndex extends Action {
+  def execute() {
+    val imagePath = param("image")
+    respondImage(imagePath)
+  }
+
+  def respondImage(imagePath: String) {
+    val file = new File(Config.jekytrum.srcDir + "/" + imagePath)
+    if (file.isFile && file.getAbsolutePath.startsWith(xitrum.root + "/" + Config.jekytrum.srcDir))
+      respondFile(file.getAbsolutePath)
+    else
+      respond404Page
+  }
+}
+
+@CacheActionMinute(5)
+@First
+@GET("""/:parent/:image<*.(jpg|JPG|jpeg|JPEG|gif|GIF|png|PNG|bmp|BMP)$>""")
+class SubImageIndex extends ImageIndex with Tokenizer {
+  override def execute() {
+    val keys = tokenize(List(param("parent")), paramo("image"))
+    val imagePath = keys.mkString("/")
+    respondImage(imagePath)
+  }
+}
+
+// remove unexpected "/"
+trait Tokenizer {
+  this: Action =>
+
+  def tokenize(parent: List[String], children: Option[String]): List[String] = {
     children match {
       case Some(t) =>
         val current = t dropWhile { _ == '/' }
@@ -52,7 +89,7 @@ class SubEntryIndex extends RootIndex {
         if (current == next)
           parent ::: List(next)
         else
-          toknize(parent ::: List(next), Some(t.substring(next.length + 1)))
+          tokenize(parent ::: List(next), Some(t.substring(next.length + 1)))
       case None => parent
     }
   }
