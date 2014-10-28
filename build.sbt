@@ -12,6 +12,8 @@ scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Ywarn-unused",
 // Xitrum requires Java 7
 javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
+libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s" % "1.3.2"
+
 //------------------------------------------------------------------------------
 
 libraryDependencies += "tv.cntt" %% "xitrum" % "3.18"

@@ -1,4 +1,5 @@
-- import jekytrum.action._
+- import jekytrum.model.Entry
+- val entry = at("entry").asInstanceOf[Entry]
 
 !!! 5
 html
@@ -7,7 +8,7 @@ html
     != xitrumCss
 
     meta(content="text/html; charset=utf-8" http-equiv="content-type")
-    title My new Xitrum project
+    title ={entry.title}
 
     link(rel="shortcut icon" href={publicUrl("favicon.ico")})
 
@@ -17,3 +18,8 @@ html
   body
     .container
       != renderedView
+
+    .footer
+      p = "createdAt:" + entry.createdAt
+      p = "updatedAt:" + entry.updatedAt
+      p = "tags:" + entry.tags

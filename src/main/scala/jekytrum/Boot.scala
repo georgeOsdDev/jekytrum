@@ -2,12 +2,18 @@ package jekytrum
 
 import xitrum.Server
 
-import jekytrum.model.Entries
+import jekytrum.model.Entry
 
 object Boot {
   def main(args: Array[String]) {
 
-    Entries.load
+    // @TODO
+    // Start ElasticSearch node
+    // Start File monitor
+    // Start File reader actor
+    // Start File converter actor
+
+    Entry.load
     Server.start()
   }
 }
