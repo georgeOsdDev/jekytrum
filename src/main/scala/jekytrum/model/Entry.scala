@@ -15,7 +15,7 @@ case class Entry(title: String, body: String, createdAt: Long, updatedAt: Long, 
 
 object Entry {
 
-  // @TODO move lookuptable to lrucache or hazalcast or etc...
+  // @TODO move lookup table to cache engine for clustering usage
   private val lookup = MMap.empty[String, Entry]
   private val entry404 = new Entry("404", "404 Not Found", 0L, 0L, List.empty)
   private val entry500 = new Entry("500", "500 System Error", 0L, 0L, List.empty)
