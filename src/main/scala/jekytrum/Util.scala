@@ -1,0 +1,4 @@
+package jekytrum
+
+class Utils {
+}

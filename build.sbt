@@ -14,6 +14,10 @@ javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
 libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s" % "1.3.2"
 
+libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2"
+
+libraryDependencies += "com.ning"    %  "async-http-client" % "1.8.14"
+
 //------------------------------------------------------------------------------
 
 libraryDependencies += "tv.cntt" %% "xitrum" % "3.18"

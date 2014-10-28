@@ -19,7 +19,7 @@ Simple static site generator.
    * Add created_at/updated_at
    * list entries at index page
    * tags
-   * routing with directory tree.
+   * :white_check_mark: routing with directory tree.
    * theme/style
    * i18n
   * Tune xitrum
