@@ -4,17 +4,23 @@ import java.io.File
 import xitrum.annotation.{ CacheActionMinute, GET, First, Last }
 import xitrum.Action
 import jekytrum.Config
-import jekytrum.model.Entry
+import jekytrum.handler.ErrorEntry
+import jekytrum.model.{ Entry, Entry404, Entry500 }
 
 @CacheActionMinute(5)
 @GET("/")
 class RootIndex extends DefaultLayout {
 
   def execute() {
-    respondEntry(Entry.getByKey(("index")))
+    respondEntry("index")
   }
 
-  def respondEntry(entry: Entry) = {
+  def respondEntry(key: String) = {
+    val entry = Entry.getByKey(key)
+    if (entry.isInstanceOf[Entry404])
+      ErrorEntry.set404Entry(handlerEnv, key)
+    if (entry.isInstanceOf[Entry500])
+      ErrorEntry.set500Entry(handlerEnv, key)
     at("entry") = entry
     respondInlineView(entry.body)
   }
@@ -33,7 +39,7 @@ class RootIndex extends DefaultLayout {
 @GET("/:title")
 class EntryIndex extends RootIndex {
   override def execute() {
-    respondEntry(Entry.getByKey(removeMarkdownExt(param("title"))))
+    respondEntry(removeMarkdownExt(param("title")))
   }
 }
 
@@ -44,7 +50,7 @@ class SubEntryIndex extends RootIndex with Tokenizer {
   override def execute() {
     val keys = tokenize(List(param("parent")), paramo("*"))
     val key = keys.mkString("/")
-    respondEntry(Entry.getByKey(removeMarkdownExt(key)))
+    respondEntry(removeMarkdownExt(key))
   }
 }
 

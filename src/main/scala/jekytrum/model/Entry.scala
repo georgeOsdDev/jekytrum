@@ -1,7 +1,10 @@
 package jekytrum.model
 
 import java.io.File
+import java.nio.file.{ Path, Paths }
 import scala.collection.mutable.{ Map => MMap }
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.io.Source
@@ -10,22 +13,30 @@ import xitrum.Log
 import xitrum.util.FileMonitor
 import jekytrum.Config
 
-case class Entry(title: String, body: String, lastModified: Long, tags: List[String])
+trait Entry {
+  val title: String
+  val body: String
+  val lastModified: Long
+  val tags: List[String]
+}
+case class EntryNormal(title: String, body: String, lastModified: Long, tags: List[String]) extends Entry
+case class Entry404(title: String = "404", body: String = "404 Not Found", lastModified: Long = 0L, tags: List[String] = List.empty) extends Entry
+case class Entry500(title: String = "500", body: String = "500 System Error", lastModified: Long = 0L, tags: List[String] = List.empty) extends Entry
 
 object Entry {
 
+  private val WAIT_MS = 1000
   // @TODO move lookup table to cache engine for clustering usage
   private val lookup = MMap.empty[String, Entry]
-  private val entry404 = new Entry("404", "404 Not Found", 0L, List.empty)
-  private val entry500 = new Entry("500", "500 System Error", 0L, List.empty)
-  private val srcDir = if (Config.jekytrum.srcDir.startsWith("/"))
-    new File(Config.jekytrum.srcDir.drop(1))
-  else
-    new File(Config.jekytrum.srcDir)
+  private val lastConvertTime = MMap.empty[String, Long]
+  private val entry404 = new Entry404
+  private val entry500 = new Entry500
+  private val srcDir = new File(Config.jekytrum.srcDir)
 
   def load() = {
     Log.debug("Convert source markdown files with " + Config.jekytrum.converter.getClass)
-    getMarkdownSources(srcDir).foreach { file =>
+    val resources = ls(srcDir)
+    getMarkdownSources(resources).foreach { file =>
       val key = trimExt(file.toString.drop(Config.jekytrum.srcDir.length + 1))
       val name = file.getName
       val title = trimExt(name)
@@ -37,50 +48,91 @@ object Entry {
           Log.warn(s"Failed to convert:${key}")
           lookup(key) = entry500
         case Success(Some(htmlString)) =>
-          val entry = new Entry(title, htmlString, file.lastModified, List.empty)
+          Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
+          val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
           lookup(key) = entry
           watchDelete(file)
+          watchModify(file)
       }
-      logEntries(key)
     }
-    watch
-  }
-
-  private def watch() {
-    Log.info(s"Start monitoring source directory: ${srcDir.toPath}")
-    FileMonitor.monitorRecursive(FileMonitor.MODIFY, srcDir.toPath, { path =>
-      val file = path.toFile
-      if (filterMarkdown(file)) {
-        Log.info(s"Entry changed: ${file}")
-        updateOrInsert(file)
-      }
-      if (file.isDirectory) {
-        Log.info(s"Directory changed: ${file}")
-        FileMonitor.unmonitorRecursive(FileMonitor.MODIFY, srcDir.toPath)
-        FileMonitor.monitorRecursive(FileMonitor.MODIFY, srcDir.toPath)
-      }
-    })
-  }
-  
-  private def watchDelete(entry: File) {
-    println("watch on delete"+entry)
-    // @TODO delete event does not fire?
-    FileMonitor.monitorRecursive(FileMonitor.DELETE, entry.toPath, { path =>
-      Log.info(s"Entry removed: ${entry}")
-      delete(entry)
-    })
-  }
-  
-  private def delete(file: File) {
-    val key = trimExt(file.toString.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
-    lookup.remove(key)
+    watchDir(srcDir)
   }
 
   def getByKey(key: String): Entry = {
     lookup.get(key) match {
       case Some(entry) => entry
-      case None        => tryIndex(key)
+      case None        => tryConvert(key)
     }
+  }
+
+  // Monitor create/delete event
+  private def watchDir(dir: File) {
+    val absPath = absolutePathFromFile(dir)
+
+    FileMonitor.unmonitorRecursive(FileMonitor.CREATE, absPath)
+    FileMonitor.monitorRecursive(FileMonitor.CREATE, absPath, { path =>
+      Log.debug("CREATE event on directory " + dir.toString + " : " + path.toString)
+      val file = path.toFile
+      if (filterMarkdown(file)) {
+        // if file exists, it means new file or update
+        if (file.exists) updateOrInsert(path.toFile)
+        else delete(file)
+      }
+      if (file.isDirectory) {
+        Log.info(s"Directory deleted: ${file}")
+      }
+      watchDir(dir)
+    })
+
+    FileMonitor.unmonitorRecursive(FileMonitor.MODIFY, absPath)
+    FileMonitor.monitorRecursive(FileMonitor.MODIFY, absPath, { path =>
+      Log.debug("Modify event on directory " + dir.toString + " : " + path.toString)
+      val file = path.toFile
+      if (filterMarkdown(file)) {
+        // if file exists, it means new file or update
+        if (file.exists) updateOrInsert(path.toFile)
+        else delete(file)
+      }
+      if (file.isDirectory) {
+        Log.info(s"Directory modified: ${file}")
+      }
+      watchDir(dir)
+    })
+
+    FileMonitor.unmonitorRecursive(FileMonitor.DELETE, absPath)
+    FileMonitor.monitorRecursive(FileMonitor.DELETE, absPath, { path =>
+      Log.debug("DELETE event on directory " + dir.toString + " : " + path.toString)
+      val file = path.toFile
+      if (filterMarkdown(file)) {
+        // if file exists, it means new file or update
+        if (file.exists) updateOrInsert(path.toFile)
+        else delete(file)
+      }
+      if (file.isDirectory) {
+        Log.info(s"Directory created: ${file}")
+      }
+      watchDir(dir)
+    })
+  }
+
+  private def watchDelete(entry: File) {
+    val absPath = absolutePathFromFile(entry)
+    FileMonitor.unmonitor(FileMonitor.DELETE, absPath)
+    FileMonitor.monitor(FileMonitor.DELETE, absPath, { path =>
+      Log.debug("Delete event on file " + path.toString)
+      delete(entry)
+      FileMonitor.unmonitor(FileMonitor.DELETE, absPath)
+    })
+  }
+
+  // Monitor update event
+  private def watchModify(entry: File) {
+    val absPath = absolutePathFromFile(entry)
+    FileMonitor.unmonitor(FileMonitor.MODIFY, absPath)
+    FileMonitor.monitor(FileMonitor.MODIFY, absPath, { path =>
+      Log.debug("Modyfy event on file " + path.toString)
+      updateOrInsert(path.toFile)
+    })
   }
 
   private def updateOrInsert(file: File) {
@@ -88,10 +140,11 @@ object Entry {
     val name = file.getName
     val title = trimExt(name)
     val existing = lookup.isDefinedAt(key)
-    if (existing && lookup(key).lastModified == file.lastModified) {
+    if (!file.exists ||
+      existing && file.lastModified == lookup(key).lastModified ||
+      existing && debounce(key)) {
       return
     }
-
     Config.jekytrum.converter.convert(file).onComplete {
       case Failure(e) =>
         Log.warn(s"Failed to convert:${key}", e)
@@ -100,11 +153,59 @@ object Entry {
         Log.warn(s"Failed to convert:${key}")
         if (!existing) lookup(key) = entry500
       case Success(Some(htmlString)) =>
-        val entry = new Entry(title, htmlString, file.lastModified, List.empty)
+        Log.info("Entry converted: from File(" + file + ") to URL(/" + key + ")")
+        val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
         lookup(key) = entry
-        if (!existing) watchDelete(file)
+        if (!existing) {
+          watchDelete(file)
+          watchModify(file)
+        }
     }
-    logEntries(key, existing)
+  }
+
+  private def debounce(key: String, wait: Long = WAIT_MS): Boolean = {
+    if (System.currentTimeMillis - lastConvertTime.getOrElse(key, 0L) < wait)
+      true
+    else {
+      lastConvertTime(key) = System.currentTimeMillis
+      false
+    }
+  }
+
+  private def delete(file: File) {
+    val key = trimExt(file.getAbsolutePath.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
+    lookup.remove(key)
+  }
+
+  private def tryConvert(key: String): Entry = {
+    val file = {
+      val md = new File(Config.jekytrum.srcDir + "/" + key + ".md")
+      if (md.exists) md
+      else new File(Config.jekytrum.srcDir + "/" + key + ".markdown")
+    }
+    if (file.exists) {
+      val name = file.getName
+      val title = trimExt(name)
+      val future = Config.jekytrum.converter.convert(file)
+      Await.ready(future, Duration.Inf)
+      future.value.get match {
+        case Failure(e) =>
+          Log.warn(s"Failed to convert:${key}", e)
+          lookup(key) = entry500
+          entry500
+        case Success(None) =>
+          Log.warn(s"Failed to convert:${key}")
+          lookup(key) = entry500
+          entry500
+        case Success(Some(htmlString)) =>
+          Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
+          val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
+          lookup(key) = entry
+          watchDelete(file)
+          watchModify(file)
+          entry
+      }
+    } else tryIndex(key)
   }
 
   // index fallback
@@ -120,12 +221,16 @@ object Entry {
     }
   }
 
+  private def absolutePathFromFile(f: File): Path = {
+    f.toPath.toAbsolutePath
+  }
+
   private def trimExt(path: String): String = {
     path.substring(0, path.lastIndexOf('.'))
   }
 
-  private def getMarkdownSources(srcDir: File): Seq[File] = {
-    ls(srcDir).filter(filterMarkdown)
+  private def getMarkdownSources(resources: Seq[File]): Seq[File] = {
+    resources.filter(filterMarkdown)
   }
 
   private def filterMarkdown(f: File): Boolean = {
@@ -140,12 +245,4 @@ object Entry {
     val files = file.listFiles
     files ++ files.filter(_.isDirectory).flatMap(ls)
   }
-
-  private def logEntries(key: String, update: Boolean = false) {
-    if (update)
-      Log.info(s"Entry updated: - ${key}")
-    else
-      Log.info(s"Entry found: - ${key}")
-  }
-
 }

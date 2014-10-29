@@ -6,9 +6,16 @@ import xitrum.{ Config => XConfig, Log }
 import jekytrum.converter.{ MarkdownConverter, NoConverter }
 
 class JekytrumConfig(config: TConfig) {
-  val srcDir = if (config.hasPath("srcDir")) config.getString("srcDir") else "src/main/markdown"
+  val srcDir = getSrcDir
   val encoding = if (config.hasPath("encoding")) config.getString("encoding") else "utf-8"
   val converter = getConveterInstance
+
+  private def getSrcDir = {
+    if (config.hasPath("srcDir")) {
+      if (config.getString("srcDir").startsWith("/")) config.getString("srcDir").drop(1)
+      else config.getString("srcDir")
+    } else "src/main/markdown"
+  }
 
   private def getConveterInstance: MarkdownConverter = {
     if (!config.hasPath("converter")) {
