@@ -52,6 +52,11 @@ class ErrorEntryInboundHandler extends SimpleChannelInboundHandler[HandlerEnv] {
     }
 
     val pathInfo = request.getUri.split('?')(0)
+    if (pathInfo.startsWith("/jekytrum/api")) {
+      ctx.fireChannelRead(env)
+      return
+    }
+
     checkSource(pathInfo) match {
       case Some(f) =>
         ctx.fireChannelRead(env)

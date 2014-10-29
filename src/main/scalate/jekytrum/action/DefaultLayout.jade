@@ -1,4 +1,5 @@
 - import jekytrum.model.Entry
+- import jekytrum.view.ViewHelper
 - val entry = at("entry").asInstanceOf[Entry]
 
 !!! 5
@@ -20,4 +21,8 @@ html
 
     .footer
       p = "lastModified:" + entry.lastModified
-      p = "tags:" + entry.tags
+      p = "categories:" + entry.categories
+
+    != ViewHelper.listEntries(None)
+
+    != ViewHelper.ListCategory

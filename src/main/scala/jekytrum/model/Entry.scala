@@ -17,11 +17,25 @@ trait Entry {
   val title: String
   val body: String
   val lastModified: Long
-  val tags: List[String]
+  val categories: List[String]
+
+  def toUrl: String = {
+    if (categories.isEmpty) title
+    else categories.last + "/" + title
+  }
 }
-case class EntryNormal(title: String, body: String, lastModified: Long, tags: List[String]) extends Entry
-case class Entry404(title: String = "404", body: String = "404 Not Found", lastModified: Long = 0L, tags: List[String] = List.empty) extends Entry
-case class Entry500(title: String = "500", body: String = "500 System Error", lastModified: Long = 0L, tags: List[String] = List.empty) extends Entry
+case class EntryNormal(title: String,
+                       body: String,
+                       lastModified: Long,
+                       categories: List[String]) extends Entry
+case class Entry404(title: String = "404",
+                    body: String = "404 Not Found",
+                    lastModified: Long = 0L,
+                    categories: List[String] = List.empty) extends Entry
+case class Entry500(title: String = "500",
+                    body: String = "500 System Error",
+                    lastModified: Long = 0L,
+                    categories: List[String] = List.empty) extends Entry
 
 object Entry {
 
@@ -49,7 +63,7 @@ object Entry {
           lookup(key) = entry500
         case Success(Some(htmlString)) =>
           Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
-          val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
+          val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
           lookup(key) = entry
           watchDelete(file)
           watchModify(file)
@@ -63,6 +77,21 @@ object Entry {
       case Some(entry) => entry
       case None        => tryConvert(key)
     }
+  }
+
+  def findByCategory(category: Option[String]): List[Map[String, String]] = {
+    category match {
+      case Some(c) => lookup.values.filter(_.categories.contains(c)).map { e =>
+        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString)
+      }.toList
+      case None => lookup.values.map { e =>
+        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString)
+      }.toList
+    }
+  }
+
+  def allCategories: List[String] = {
+    lookup.values.map(_.categories).flatMap(f => f).toSeq.distinct.toList
   }
 
   // Monitor create/delete event
@@ -154,7 +183,7 @@ object Entry {
         if (!existing) lookup(key) = entry500
       case Success(Some(htmlString)) =>
         Log.info("Entry converted: from File(" + file + ") to URL(/" + key + ")")
-        val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
+        val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
         lookup(key) = entry
         if (!existing) {
           watchDelete(file)
@@ -199,7 +228,7 @@ object Entry {
           entry500
         case Success(Some(htmlString)) =>
           Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
-          val entry = new EntryNormal(title, htmlString, file.lastModified, List.empty)
+          val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
           lookup(key) = entry
           watchDelete(file)
           watchModify(file)
@@ -245,4 +274,21 @@ object Entry {
     val files = file.listFiles
     files ++ files.filter(_.isDirectory).flatMap(ls)
   }
+
+  private def categorize(key: String): List[String] = {
+    if (!key.contains("/")) List.empty
+    else {
+
+      def categoryze(acc: List[String], keys: Seq[String]): List[String] = {
+        if (keys.isEmpty) acc
+        else {
+          val parent = if (acc.isEmpty) "" else acc.last + "/"
+          categoryze(acc ++ List(parent + keys.head), keys.tail)
+        }
+      }
+      val keys = key.split("/")
+      categoryze(List.empty, keys.init)
+    }
+  }
+
 }

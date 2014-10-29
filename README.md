@@ -17,12 +17,12 @@ Simple static site generator.
    * :white_check_mark: routing with directory tree.
    * :white_check_mark: compile markdown in async with Future
    * :white_check_mark: Add lastModified
-   * livereload with file monitor
+   * :white_check_mark: livereload with file monitor
+   * :white_check_mark: categories
    * list entries at index page
    * theme/style
    * i18n
    * next,prev utility
-   * tags
    * Embed elastic search
   * Tune xitrum
    * remove unused pipeline handler

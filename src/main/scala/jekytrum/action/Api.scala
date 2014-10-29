@@ -19,17 +19,19 @@ class SearchAPI extends ActorAction() {
 }
 
 @First
-@GET("/jekytrum/api/tags")
-class tagAPI extends ActorAction {
+@GET("/jekytrum/api/list")
+class ListAPI extends ActorAction {
   def execute() {
-    respondJson(Map("tags" -> List()))
+    val category = paramo("category")
+    Entry.findByCategory(category)
+    respondJson(Map("entries" -> Entry.findByCategory(category)))
   }
 }
 
 @First
-@GET("/jekytrum/api/list")
-class listAPI extends ActorAction {
+@GET("/jekytrum/api/categories")
+class CategoryAPI extends ActorAction {
   def execute() {
-    respondJson(Map("list" -> List()))
+    respondJson(Map("categories" -> Entry.allCategories))
   }
 }
