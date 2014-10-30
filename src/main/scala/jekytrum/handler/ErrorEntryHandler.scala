@@ -11,7 +11,7 @@ import xitrum.Action
 import xitrum.handler.HandlerEnv
 import xitrum.handler.outbound.XSendFile
 import jekytrum.Config
-import jekytrum.action.DefaultLayout
+import jekytrum.action.EntryLayout
 import jekytrum.model.Entry404
 
 object ErrorEntry {
@@ -119,7 +119,7 @@ class ErrorEntryOutboundHandler extends ChannelOutboundHandlerAdapter {
   }
 }
 
-class DummyAction extends DefaultLayout {
+class DummyAction extends EntryLayout {
   def execute() {
     val entry = new Entry404
     at("entry") = entry

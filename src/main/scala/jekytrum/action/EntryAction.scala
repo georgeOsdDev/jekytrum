@@ -7,13 +7,8 @@ import jekytrum.Config
 import jekytrum.handler.ErrorEntry
 import jekytrum.model.{ Entry, Entry404, Entry500 }
 
-@CacheActionMinute(5)
-@GET("/")
-class RootIndex extends DefaultLayout {
-
-  def execute() {
-    respondEntry("index")
-  }
+trait EntryLayout extends Action {
+  override def layout = renderViewNoLayout[EntryLayout]()
 
   def respondEntry(key: String) = {
     val entry = Entry.getByKey(key)
@@ -37,7 +32,7 @@ class RootIndex extends DefaultLayout {
 
 @CacheActionMinute(5)
 @GET("/:title")
-class EntryIndex extends RootIndex {
+class EntryAction extends Action with EntryLayout {
   override def execute() {
     respondEntry(removeMarkdownExt(param("title")))
   }
@@ -46,7 +41,7 @@ class EntryIndex extends RootIndex {
 @CacheActionMinute(5)
 @Last
 @GET("/:parent/:*")
-class SubEntryIndex extends RootIndex with Tokenizer {
+class SubEntryAction extends Action with EntryLayout with Tokenizer {
   override def execute() {
     val keys = tokenize(List(param("parent")), paramo("*"))
     val key = keys.mkString("/")
@@ -57,7 +52,7 @@ class SubEntryIndex extends RootIndex with Tokenizer {
 @CacheActionMinute(5)
 @First
 @GET("""/:image<*.(jpg|JPG|jpeg|JPEG|gif|GIF|png|PNG|bmp|BMP)$>""")
-class ImageIndex extends Action {
+class ImageShow extends Action {
   def execute() {
     val imagePath = param("image")
     respondImage(imagePath)
@@ -75,7 +70,7 @@ class ImageIndex extends Action {
 @CacheActionMinute(5)
 @First
 @GET("""/:parent/:image<*.(jpg|JPG|jpeg|JPEG|gif|GIF|png|PNG|bmp|BMP)$>""")
-class SubImageIndex extends ImageIndex with Tokenizer {
+class SubImageShow extends ImageShow with Tokenizer {
   override def execute() {
     val keys = tokenize(List(param("parent")), paramo("image"))
     val imagePath = keys.mkString("/")

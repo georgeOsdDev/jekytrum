@@ -23,6 +23,11 @@ trait Entry {
     if (categories.isEmpty) title
     else categories.last + "/" + title
   }
+
+  def category: String = {
+    if (categories.isEmpty) ""
+    else categories.last
+  }
 }
 case class EntryNormal(title: String,
                        body: String,
@@ -82,10 +87,10 @@ object Entry {
   def findByCategory(category: Option[String]): List[Map[String, String]] = {
     category match {
       case Some(c) => lookup.values.filter(_.categories.contains(c)).map { e =>
-        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString)
+        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString, "category" -> e.category)
       }.toList
       case None => lookup.values.map { e =>
-        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString)
+        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString, "category" -> e.category)
       }.toList
     }
   }
