@@ -1,5 +1,4 @@
 - import jekytrum.model.Entry
-- import jekytrum.view.ViewHelper
 - val entry = at("entry").asInstanceOf[Entry]
 
 !!! 5
@@ -23,6 +22,8 @@ html
       p = "lastModified:" + entry.lastModified
       p = "categories:" + entry.categories
 
-    != ViewHelper.listEntries(None)
+    .sameCategory
+      != at("entries")
 
-    != ViewHelper.ListCategory
+    .backtoTop
+      a(href="/") top

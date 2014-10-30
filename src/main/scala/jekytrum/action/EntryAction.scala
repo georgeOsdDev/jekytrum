@@ -6,8 +6,9 @@ import xitrum.Action
 import jekytrum.Config
 import jekytrum.handler.ErrorEntry
 import jekytrum.model.{ Entry, Entry404, Entry500 }
+import jekytrum.view.ViewHelper
 
-trait EntryLayout extends Action {
+trait EntryLayout extends Action with ViewHelper {
   override def layout = renderViewNoLayout[EntryLayout]()
 
   def respondEntry(key: String) = {
@@ -17,6 +18,7 @@ trait EntryLayout extends Action {
     if (entry.isInstanceOf[Entry500])
       ErrorEntry.set500Entry(handlerEnv, key)
     at("entry") = entry
+    at("entries") = listEntries(Some(entry.category))
     respondInlineView(entry.body)
   }
 

@@ -9,7 +9,8 @@ import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.{ Failure, Success }
-import xitrum.Log
+import xitrum.{ Config => xConfig, Log }
+import xitrum.action.Url
 import xitrum.util.FileMonitor
 import jekytrum.Config
 
@@ -27,6 +28,14 @@ trait Entry {
   def category: String = {
     if (categories.isEmpty) ""
     else categories.last
+  }
+
+  def next: Entry = {
+    this
+  }
+
+  def prev: Entry = {
+    this
   }
 }
 case class EntryNormal(title: String,
@@ -59,6 +68,7 @@ object Entry {
       val key = trimExt(file.toString.drop(Config.jekytrum.srcDir.length + 1))
       val name = file.getName
       val title = trimExt(name)
+      lastConvertTime(key) = System.currentTimeMillis
       Config.jekytrum.converter.convert(file).onComplete {
         case Failure(e) =>
           Log.warn(s"Failed to convert:${key}", e)
@@ -84,14 +94,10 @@ object Entry {
     }
   }
 
-  def findByCategory(category: Option[String]): List[Map[String, String]] = {
+  def findByCategory(category: Option[String]): List[Entry] = {
     category match {
-      case Some(c) => lookup.values.filter(_.categories.contains(c)).map { e =>
-        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString, "category" -> e.category)
-      }.toList
-      case None => lookup.values.map { e =>
-        Map("url" -> e.toUrl, "updatedAt" -> e.lastModified.toString, "category" -> e.category)
-      }.toList
+      case Some(c) => lookup.values.filter(_.categories.contains(c)).toList
+      case None    => lookup.values.toList
     }
   }
 

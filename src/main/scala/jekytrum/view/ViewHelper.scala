@@ -1,40 +1,36 @@
 package jekytrum.view
 
+import xitrum.Action
 import jekytrum.model.Entry
 
-object ViewHelper {
+trait ViewHelper {
+  this: Action =>
 
   private val dataFormat = new java.text.SimpleDateFormat("YYYY/MM/dd HH:mm:ss")
 
   def listEntries(category: Option[String]): String = {
     val entries = Entry.findByCategory(category)
-    """<ul class="entryList">""" +
-      entries.sortBy(_("updatedAt")).map { e =>
-        s"""
+    val list = entries.sortBy(_.lastModified).map { e =>
+      s"""
 <li class="entry">
-  <a href="/${e("url")}">${e("url").split("/").last}</a>
-  <span class="updatedAt">(${dataFormat.format(e("updatedAt").toLong).toString})</span>
-  <span class="category"><a href="/?category=${e("category")}">${e("category")}</span>
+  <a href="${absUrlPrefix}/${e.toUrl}">${e.title}</a>
+  <span class="updatedAt">(${dataFormat.format(e.lastModified).toString})</span>
+  <span class="category"><a href="${absUrlPrefix}/?category=${e.category}">${e.category}</span>
 </li>
 """
-      }.mkString("\n") +
-      "</ul>"
+    }
+    s"""<ul class="entryList">${list.mkString("\n")}</ul>"""
   }
 
-  def ListCategory: String = {
+  def listCategories: String = {
     val categories = Entry.allCategories
-    """
-<ul class="categoryList">
-  <li class="category">
-    <a href="/">/</a>
-  </li>""" +
-      categories.sorted.map { c =>
-        s"""
+    val list = categories.sorted.map { c =>
+      s"""
   <li class="category">
     <a href="/?category=${c}">${c}</a>
   </li>
 """
-      }.mkString("\n") +
-      "</ul>"
+    }
+    s"""<ul class="categoryList"><li class="category"><a href="/">/</a></li>${list.mkString("\n")}</ul>"""
   }
 }
