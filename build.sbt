@@ -18,9 +18,10 @@ libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2"
 
 libraryDependencies += "com.ning"    %  "async-http-client" % "1.8.14"
 
+
 //------------------------------------------------------------------------------
 
-libraryDependencies += "tv.cntt" %% "xitrum" % "3.18"
+libraryDependencies += "tv.cntt" %% "xitrum" % "3.19-SNAPSHOT"
 
 // Xitrum uses SLF4J, an implementation of SLF4J is needed
 libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.2"
@@ -32,7 +33,7 @@ libraryDependencies += "org.webjars" % "bootstrap" % "3.2.0"
 
 // Scalate template engine config for Xitrum -----------------------------------
 
-libraryDependencies += "tv.cntt" %% "xitrum-scalate" % "2.2"
+libraryDependencies += "tv.cntt" %% "xitrum-scalate" % "2.3-SNAPSHOT"
 
 // Precompile Scalate templates
 seq(scalateSettings:_*)

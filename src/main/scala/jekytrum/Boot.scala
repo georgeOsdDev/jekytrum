@@ -11,7 +11,7 @@ object Boot {
 
     // @TODO
     // Start ElasticSearch node
-
+    Config.start
     Entry.load
     val channelInitializer = new JekytrumChannelInitializer
     Server.start(channelInitializer)

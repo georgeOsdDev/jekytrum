@@ -68,12 +68,12 @@ class ErrorEntryInboundHandler extends SimpleChannelInboundHandler[HandlerEnv] {
 
   private def checkSource(pathInfo: String): Option[File] = {
     val sourcePath =
-      if (pathInfo.startsWith("/")) Config.jekytrum.srcDir + pathInfo
-      else Config.jekytrum.srcDir + "/" + pathInfo
+      if (pathInfo.startsWith(File.separator)) Config.jekytrum.srcDir + pathInfo
+      else Config.jekytrum.srcDir + File.separator + pathInfo
     val maybeDirectory = new File(sourcePath)
     val files =
       if (maybeDirectory.exists && maybeDirectory.isDirectory)
-        (sourcePath + "/index.md", sourcePath + "/index.markdown")
+        (sourcePath + File.separator + "index.md", sourcePath + File.separator + "index.markdown")
       else
         (sourcePath + ".md", sourcePath + ".markdown")
     val md = new File(files._1)

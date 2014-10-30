@@ -1,0 +1,42 @@
+- import jekytrum.action.EntryLayout
+- import jekytrum.model.Entry
+- val entry = at("entry").asInstanceOf[Entry]
+- val act = currentAction.asInstanceOf[EntryLayout];
+
+!!! 5
+html
+  head
+    != xitrumCss
+
+    meta(content="text/html; charset=utf-8" http-equiv="content-type")
+    title ={entry.title}
+
+    link(rel="shortcut icon" href={publicUrl("favicon.ico")})
+
+    link(type="text/css" rel="stylesheet" media="all" href={webJarsUrl("bootstrap/3.2.0/css", "bootstrap.css", "bootstrap.min.css")})
+    link(type="text/css" rel="stylesheet" media="all" href={publicUrl("app.css")})
+
+  body
+    h1 Custom Entry layout
+
+    .container
+      != renderedView
+
+    .footer
+      p = "lastModified: " + entry.lastModified
+      p = "category: " + entry.category
+
+    p same category entries:
+    .sameCategory
+      != act.listEntries(Some(entry.category))
+
+    p prev:
+    .prev
+      != act.prevLink(entry)
+
+    p next:
+    .next
+      != act.nextLink(entry)
+
+    .backtoTop
+      a(href="/") back to top

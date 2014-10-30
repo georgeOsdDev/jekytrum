@@ -3,14 +3,18 @@ package jekytrum.action
 import java.io.File
 import xitrum.annotation.{ CacheActionMinute, GET, First, Last }
 import xitrum.Action
-import jekytrum.Config
+import jekytrum.{ Config, Util }
 import jekytrum.handler.ErrorEntry
 import jekytrum.model.{ Entry, Entry404, Entry500 }
 import jekytrum.view.ViewHelper
 
 trait EntryLayout extends Action with ViewHelper {
-  override def layout = renderViewNoLayout[EntryLayout]()
-
+  override def layout =
+    Config.jekytrum.theme match {
+      case Some(t) =>
+        renderViewNoLayout(t.entryLayout, Map.empty[String, Any])
+      case None => renderViewNoLayout[EntryLayout]()
+    }
   def respondEntry(key: String) = {
     val entry = Entry.getByKey(key)
     if (entry.isInstanceOf[Entry404])
@@ -45,7 +49,7 @@ class EntryAction extends Action with EntryLayout {
 class SubEntryAction extends Action with EntryLayout with Tokenizer {
   override def execute() {
     val keys = tokenize(List(param("parent")), paramo("*"))
-    val key = keys.mkString("/")
+    val key = keys.mkString(File.separator)
     respondEntry(removeMarkdownExt(key))
   }
 }
@@ -60,8 +64,8 @@ class ImageShow extends Action {
   }
 
   def respondImage(imagePath: String) {
-    val file = new File(Config.jekytrum.srcDir + "/" + imagePath)
-    if (file.isFile && file.getAbsolutePath.startsWith(xitrum.root + "/" + Config.jekytrum.srcDir))
+    val file = new File(Config.jekytrum.srcDir + File.separator + imagePath)
+    if (file.isFile && file.getAbsolutePath.startsWith(xitrum.root + File.separator + Config.jekytrum.srcDir))
       respondFile(file.getAbsolutePath)
     else
       respond404Page
@@ -74,19 +78,19 @@ class ImageShow extends Action {
 class SubImageShow extends ImageShow with Tokenizer {
   override def execute() {
     val keys = tokenize(List(param("parent")), paramo("image"))
-    val imagePath = keys.mkString("/")
+    val imagePath = keys.mkString(File.separator)
     respondImage(imagePath)
   }
 }
 
-// remove unexpected "/"
+// remove unexpected "/" from url path param
 trait Tokenizer {
   this: Action =>
 
   def tokenize(parent: List[String], children: Option[String]): List[String] = {
     children match {
       case Some(t) =>
-        val current = t dropWhile { _ == '/' }
+        val current = t dropWhile { _.toString == "/" }
         val next = current.split("/")(0)
         if (current == next)
           parent ::: List(next)

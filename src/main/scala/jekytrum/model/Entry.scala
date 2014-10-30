@@ -23,7 +23,7 @@ trait Entry {
 
   def toUrl: String = {
     if (categories.isEmpty) title
-    else categories.last + "/" + title
+    else categories.last + File.separator + title
   }
 
   def category: String = {
@@ -195,7 +195,7 @@ object Entry {
   }
 
   private def updateOrInsert(file: File) {
-    val key = trimExt(file.toString.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
+    val key = trimExt(file.toString.drop((xitrum.root + File.separator + Config.jekytrum.srcDir).length + 1))
     val name = file.getName
     val title = trimExt(name)
     val existing = lookup.isDefinedAt(key)
@@ -232,15 +232,15 @@ object Entry {
   }
 
   private def delete(file: File) {
-    val key = trimExt(file.getAbsolutePath.drop((xitrum.root + "/" + Config.jekytrum.srcDir).length + 1))
+    val key = trimExt(file.getAbsolutePath.drop((xitrum.root + File.separator + Config.jekytrum.srcDir).length + 1))
     lookup.remove(key)
   }
 
   private def tryConvert(key: String): Entry = {
     val file = {
-      val md = new File(Config.jekytrum.srcDir + "/" + key + ".md")
+      val md = new File(Config.jekytrum.srcDir + File.separator + key + ".md")
       if (md.exists) md
-      else new File(Config.jekytrum.srcDir + "/" + key + ".markdown")
+      else new File(Config.jekytrum.srcDir + File.separator + key + ".markdown")
     }
     if (file.exists) {
       val name = file.getName
@@ -270,10 +270,10 @@ object Entry {
   // index fallback
   private def tryIndex(key: String): Entry = {
     val indexKey =
-      if (key.endsWith("/"))
+      if (key.endsWith(File.separator))
         key + "index"
       else
-        key + "/index"
+        key + File.separator + "index"
     lookup.get(indexKey) match {
       case Some(entry) => entry
       case None        => entry404
@@ -306,17 +306,17 @@ object Entry {
   }
 
   private def categorize(key: String): List[String] = {
-    if (!key.contains("/")) List.empty
+    if (!key.contains(File.separator)) List.empty
     else {
 
       def categoryze(acc: List[String], keys: Seq[String]): List[String] = {
         if (keys.isEmpty) acc
         else {
-          val parent = if (acc.isEmpty) "" else acc.last + "/"
+          val parent = if (acc.isEmpty) "" else acc.last + File.separator
           categoryze(acc ++ List(parent + keys.head), keys.tail)
         }
       }
-      val keys = key.split("/")
+      val keys = key.split(File.separator)
       categoryze(List.empty, keys.init)
     }
   }
