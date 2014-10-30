@@ -9,7 +9,6 @@ import jekytrum.view.ViewHelper
 class RootIndex extends Action with ViewHelper {
   def execute() {
     at("entries") = listEntries(paramo("category"))
-    at("categories") = listCategories
     respondViewNoLayout()
   }
 }

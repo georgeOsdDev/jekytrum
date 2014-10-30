@@ -15,7 +15,7 @@ trait ViewHelper {
 <li class="entry">
   <a href="${absUrlPrefix}/${e.toUrl}">${e.title}</a>
   <span class="updatedAt">(${dataFormat.format(e.lastModified).toString})</span>
-  <span class="category"><a href="${absUrlPrefix}/?category=${e.category}">${e.category}</span>
+  <span class="category"><a href="${absUrlPrefix}/?category=${e.category}">${e.category}</a></span>
 </li>
 """
     }
@@ -32,5 +32,19 @@ trait ViewHelper {
 """
     }
     s"""<ul class="categoryList"><li class="category"><a href="/">/</a></li>${list.mkString("\n")}</ul>"""
+  }
+
+  def nextLink(current: Entry): String = {
+    current.next match {
+      case Some(e) => s"""<a href="${absUrlPrefix}/${e.toUrl}">${e.title}</a>"""
+      case None    => ""
+    }
+  }
+
+  def prevLink(current: Entry): String = {
+    current.prev match {
+      case Some(e) => s"""<a href="${absUrlPrefix}/${e.toUrl}">${e.title}</a>"""
+      case None    => ""
+    }
   }
 }

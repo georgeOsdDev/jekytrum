@@ -19,15 +19,15 @@ Simple static site generator.
    * :white_check_mark: Add lastModified
    * :white_check_mark: livereload with file monitor
    * :white_check_mark: categories
-   * list entries at index page
+   * :white_check_mark: list entries at index page
+   * :white_check_mark: next,prev utility
    * theme/style
    * i18n
-   * next,prev utility
    * Embed elastic search
   * Tune xitrum
-   * remove unused pipeline handler
-   * load content at handler
-   * use LruCache instead of MMap
-   * hack xitrum-package
+   * :white_check_mark: load content at handler
+   * ~~remove unused pipeline handler~~
+   * ~~use LruCache instead of MMap~~
+   * hack xitrum-package to work with `xitrum-package`ed module
   * Follow the good parts from existing systems
     (http://www.slant.co/topics/330/compare/~jekyll_vs_octopress_vs_docpad)

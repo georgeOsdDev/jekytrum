@@ -18,7 +18,6 @@ trait EntryLayout extends Action with ViewHelper {
     if (entry.isInstanceOf[Entry500])
       ErrorEntry.set500Entry(handlerEnv, key)
     at("entry") = entry
-    at("entries") = listEntries(Some(entry.category))
     respondInlineView(entry.body)
   }
 

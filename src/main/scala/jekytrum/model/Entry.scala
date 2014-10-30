@@ -13,6 +13,7 @@ import xitrum.{ Config => xConfig, Log }
 import xitrum.action.Url
 import xitrum.util.FileMonitor
 import jekytrum.Config
+import scala.collection.generic.Sorted
 
 trait Entry {
   val title: String
@@ -30,12 +31,12 @@ trait Entry {
     else categories.last
   }
 
-  def next: Entry = {
-    this
+  def next: Option[Entry] = {
+    Entry.next(this)
   }
 
-  def prev: Entry = {
-    this
+  def prev: Option[Entry] = {
+    Entry.prev(this)
   }
 }
 case class EntryNormal(title: String,
@@ -55,7 +56,7 @@ object Entry {
 
   private val WAIT_MS = 1000
   // @TODO move lookup table to cache engine for clustering usage
-  private val lookup = MMap.empty[String, Entry]
+  val lookup = MMap.empty[String, Entry]
   private val lastConvertTime = MMap.empty[String, Long]
   private val entry404 = new Entry404
   private val entry500 = new Entry500
@@ -103,6 +104,24 @@ object Entry {
 
   def allCategories: List[String] = {
     lookup.values.map(_.categories).flatMap(f => f).toSeq.distinct.toList
+  }
+
+  def next(current: Entry): Option[Entry] = {
+    val nexts = lookup.values
+      .filter(e => e.lastModified > current.lastModified)
+      .toList
+      .sortWith((a, b) => a.lastModified < b.lastModified)
+    if (nexts.isEmpty) None
+    else Some(nexts.head)
+  }
+
+  def prev(current: Entry): Option[Entry] = {
+    val prevs = lookup.values
+      .filter(e => e.lastModified < current.lastModified)
+      .toList
+      .sortWith((a, b) => a.lastModified < b.lastModified)
+    if (prevs.isEmpty) None
+    else Some(prevs.last)
   }
 
   // Monitor create/delete event

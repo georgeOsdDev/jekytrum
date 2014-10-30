@@ -1,4 +1,6 @@
+- import jekytrum.action.RootIndex
 - import jekytrum.model.Entry
+- val act = currentAction.asInstanceOf[RootIndex];
 
 !!! 5
 html
@@ -16,4 +18,4 @@ html
     .container
       != at("entries")
 
-    != at("categories")
+    != act.listCategories

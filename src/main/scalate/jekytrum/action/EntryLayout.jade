@@ -1,5 +1,7 @@
+- import jekytrum.action.EntryLayout
 - import jekytrum.model.Entry
 - val entry = at("entry").asInstanceOf[Entry]
+- val act = currentAction.asInstanceOf[EntryLayout];
 
 !!! 5
 html
@@ -19,11 +21,20 @@ html
       != renderedView
 
     .footer
-      p = "lastModified:" + entry.lastModified
-      p = "categories:" + entry.categories
+      p = "lastModified: " + entry.lastModified
+      p = "category: " + entry.category
 
+    p same category entries:
     .sameCategory
-      != at("entries")
+      != act.listEntries(Some(entry.category))
+
+    p prev:
+    .prev
+      != act.prevLink(entry)
+
+    p next:
+    .next
+      != act.nextLink(entry)
 
     .backtoTop
-      a(href="/") top
+      a(href="/") back to top
