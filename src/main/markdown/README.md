@@ -1,1 +1,0 @@
-# Jekytrum = Jekyll + Xitrum
