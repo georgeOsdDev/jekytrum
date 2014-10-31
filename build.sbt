@@ -12,6 +12,12 @@ scalacOptions ++= Seq("-deprecation", "-feature", "-unchecked", "-Ywarn-unused",
 // Xitrum requires Java 7
 javacOptions ++= Seq("-source", "1.7", "-target", "1.7")
 
+libraryDependencies += "org.codehaus.groovy" % "groovy-all" % "2.3.2"
+
+libraryDependencies += "org.apache.lucene" % "lucene-expressions" % "4.9.0"
+
+libraryDependencies += "org.elasticsearch" % "elasticsearch" % "1.3.2"
+
 libraryDependencies += "com.sksamuel.elastic4s" %% "elastic4s" % "1.3.2"
 
 libraryDependencies += "org.pegdown" % "pegdown" % "1.4.2"

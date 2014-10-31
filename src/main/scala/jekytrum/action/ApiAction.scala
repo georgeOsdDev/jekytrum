@@ -7,6 +7,8 @@ import xitrum.{ Action, ActorAction }
 import xitrum.util.SeriDeseri
 
 import jekytrum.model.Entry
+import jekytrum.model.elasticsearch.Node
+import jekytrum.view.ViewHelper
 
 trait JekytrumAPI {
   this: ActorAction =>
@@ -21,11 +23,22 @@ trait JekytrumAPI {
  */
 @First
 @GET("/jekytrum/api/search")
-class SearchAPI extends ActorAction with JekytrumAPI {
+class SearchAPI extends ActorAction with JekytrumAPI with ViewHelper {
   def execute() {
     val keyword = param("keyword")
-    log.debug("do search with:" + keyword)
-    respondResult(List())
+    val resp = Node.searchEntry(keyword)
+    val hits = resp.getHits.getHits.map { h =>
+      Entry.getByKey(h.sourceAsMap.get("key").asInstanceOf[String])
+    }
+    paramo("type") match {
+      case Some("json") =>
+        respondResult(Map(
+          "count" -> resp.getHits.getTotalHits,
+          "hits" -> hits))
+      case _ =>
+        at("entries") = listEntries(None, Some(hits.toList))
+        respondViewNoLayout[RootIndex]()
+    }
   }
 }
 

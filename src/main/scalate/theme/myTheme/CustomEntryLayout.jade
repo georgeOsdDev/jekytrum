@@ -1,7 +1,7 @@
-- import jekytrum.action.EntryLayout
+- import jekytrum.view.ViewHelper
 - import jekytrum.model.Entry
 - val entry = at("entry").asInstanceOf[Entry]
-- val act = currentAction.asInstanceOf[EntryLayout];
+- val act = currentAction.asInstanceOf[ViewHelper];
 
 !!! 5
 html
@@ -28,7 +28,7 @@ html
 
     p same category entries:
     .sameCategory
-      != act.listEntries(Some(entry.category))
+      != act.listEntries(Some(entry.category), None)
 
     p prev:
     .prev
@@ -40,3 +40,5 @@ html
 
     .backtoTop
       a(href="/") back to top
+
+    != act.searchBox

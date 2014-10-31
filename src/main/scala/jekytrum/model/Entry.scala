@@ -3,19 +3,22 @@ package jekytrum.model
 import java.io.File
 import java.nio.file.{ Path, Paths }
 import scala.collection.mutable.{ Map => MMap }
+import scala.collection.generic.Sorted
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
 import scala.concurrent.ExecutionContext
 import ExecutionContext.Implicits.global
 import scala.io.Source
 import scala.util.{ Failure, Success }
+import com.sksamuel.elastic4s.source.DocumentMap
 import xitrum.{ Config => xConfig, Log }
 import xitrum.action.Url
 import xitrum.util.FileMonitor
 import jekytrum.Config
-import scala.collection.generic.Sorted
+import jekytrum.model.elasticsearch.Node
 
-trait Entry {
+trait Entry extends DocumentMap {
+  val key: String
   val title: String
   val body: String
   val lastModified: Long
@@ -38,16 +41,29 @@ trait Entry {
   def prev: Option[Entry] = {
     Entry.prev(this)
   }
+
+  def map = {
+    Map[String, Any](
+      "key" -> this.key,
+      "title" -> this.title,
+      "body" -> this.body,
+      "lastModified" -> this.lastModified,
+      "categories" -> this.categories.mkString(" "))
+  }
+
 }
-case class EntryNormal(title: String,
+case class EntryNormal(key: String,
+                       title: String,
                        body: String,
                        lastModified: Long,
                        categories: List[String]) extends Entry
-case class Entry404(title: String = "404",
+case class Entry404(key: String = "404",
+                    title: String = "404",
                     body: String = "404 Not Found",
                     lastModified: Long = 0L,
                     categories: List[String] = List.empty) extends Entry
-case class Entry500(title: String = "500",
+case class Entry500(key: String = "500",
+                    title: String = "500",
                     body: String = "500 System Error",
                     lastModified: Long = 0L,
                     categories: List[String] = List.empty) extends Entry
@@ -79,10 +95,11 @@ object Entry {
           lookup(key) = entry500
         case Success(Some(htmlString)) =>
           Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
-          val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
+          val entry = new EntryNormal(key, title, htmlString, file.lastModified, categorize(key))
           lookup(key) = entry
           watchDelete(file)
           watchModify(file)
+          Node.saveEntry(entry)
       }
     }
     watchDir(srcDir)
@@ -213,11 +230,12 @@ object Entry {
         if (!existing) lookup(key) = entry500
       case Success(Some(htmlString)) =>
         Log.info("Entry converted: from File(" + file + ") to URL(/" + key + ")")
-        val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
+        val entry = new EntryNormal(key, title, htmlString, file.lastModified, categorize(key))
         lookup(key) = entry
         if (!existing) {
           watchDelete(file)
           watchModify(file)
+          Node.updateEntry(entry)
         }
     }
   }
@@ -233,7 +251,9 @@ object Entry {
 
   private def delete(file: File) {
     val key = trimExt(file.getAbsolutePath.drop((xitrum.root + File.separator + Config.jekytrum.srcDir).length + 1))
+    val e = lookup(key)
     lookup.remove(key)
+    Node.deleteEntry(e)
   }
 
   private def tryConvert(key: String): Entry = {
@@ -258,10 +278,11 @@ object Entry {
           entry500
         case Success(Some(htmlString)) =>
           Log.info(s"Entry converted: from File(${file}) to URL(/${key})")
-          val entry = new EntryNormal(title, htmlString, file.lastModified, categorize(key))
+          val entry = new EntryNormal(key, title, htmlString, file.lastModified, categorize(key))
           lookup(key) = entry
           watchDelete(file)
           watchModify(file)
+          Node.updateEntry(entry)
           entry
       }
     } else tryIndex(key)

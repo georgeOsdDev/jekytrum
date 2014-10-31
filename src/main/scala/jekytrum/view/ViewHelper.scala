@@ -8,8 +8,11 @@ trait ViewHelper {
 
   private val dataFormat = new java.text.SimpleDateFormat("YYYY/MM/dd HH:mm:ss")
 
-  def listEntries(category: Option[String]): String = {
-    val entries = Entry.findByCategory(category)
+  def listEntries(category: Option[String], result: Option[List[Entry]]): String = {
+    val entries = result match {
+      case Some(r) => r
+      case _       => Entry.findByCategory(category)
+    }
     val list = entries.sortBy(_.lastModified).map { e =>
       s"""
 <li class="entry">
@@ -46,5 +49,14 @@ trait ViewHelper {
       case Some(e) => s"""<a href="${absUrlPrefix}/${e.toUrl}">${e.title}</a>"""
       case None    => ""
     }
+  }
+
+  val searchBox: String = {
+    """
+<div class="jekytrum-search"><form action="/jekytrum/api/search" method="GET">
+  <input type="text" name="keyword"></input>
+  <input type="submit" value="Search"/>
+</form></div>
+"""
   }
 }

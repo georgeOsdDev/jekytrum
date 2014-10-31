@@ -15,16 +15,17 @@ class ThemeConfig(config: TConfig) {
 }
 
 class JekytrumConfig(config: TConfig) {
-  val srcDir = getSrcDir
+  val srcDir = getDir("srcDir", "src" + File.separator + "main" + File.separator + "markdown")
+  val dataDir = getDir("dataDir", "tmp" + File.separator + "data")
   val encoding = if (config.hasPath("encoding")) config.getString("encoding") else "utf-8"
   val converter = getConveterInstance
   val theme: Option[ThemeConfig] = if (config.hasPath("theme")) Some(new ThemeConfig(config.getConfig("theme"))) else None
 
-  private def getSrcDir = {
-    if (config.hasPath("srcDir")) {
-      if (config.getString("srcDir").startsWith(File.separator)) config.getString("srcDir").drop(1)
-      else config.getString("srcDir")
-    } else "src" + File.separator + "main" + File.separator + "markdown"
+  private def getDir(key: String, default: String): String = {
+    if (config.hasPath(key)) {
+      if (config.getString(key).startsWith(File.separator)) config.getString(key).drop(1)
+      else config.getString(key)
+    } else default
   }
 
   private def getConveterInstance: MarkdownConverter = {

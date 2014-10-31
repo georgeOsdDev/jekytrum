@@ -1,6 +1,6 @@
-- import jekytrum.action.RootIndex
+- import jekytrum.view.ViewHelper
 - import jekytrum.model.Entry
-- val act = currentAction.asInstanceOf[RootIndex];
+- val act = currentAction.asInstanceOf[ViewHelper];
 
 !!! 5
 html
@@ -19,3 +19,5 @@ html
       != at("entries")
 
     != act.listCategories
+
+    != act.searchBox
