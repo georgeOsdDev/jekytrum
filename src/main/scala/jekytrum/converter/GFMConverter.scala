@@ -11,7 +11,7 @@ class GFMConverter extends MarkdownConverter {
 
   override def convert(src: String) = {
     val builder = asyncHttpClient.preparePost(GITHUB_API_URL)
-      .addHeader("Content-type", "text/plain")
+      .addHeader("Content-type", "text/plain; charset=UTF-8")
       .setBody(src)
 
     val p = Promise[Option[String]]
