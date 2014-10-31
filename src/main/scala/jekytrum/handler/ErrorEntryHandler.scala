@@ -2,17 +2,17 @@ package jekytrum.handler
 
 import java.io.File
 import scala.util.control.NonFatal
+import scala.collection.mutable.{ Map => MMap }
 import io.netty.channel.{ ChannelHandler, ChannelHandlerContext, ChannelPromise, ChannelOutboundHandlerAdapter, SimpleChannelInboundHandler }
 import io.netty.handler.codec.http.{ HttpHeaders, HttpMethod, HttpRequest, HttpResponseStatus }
 import ChannelHandler.Sharable
 import HttpMethod.GET
 import HttpResponseStatus.{ NOT_FOUND, INTERNAL_SERVER_ERROR }
-import xitrum.Action
+import xitrum.{ Action, Config => XConfig }
 import xitrum.handler.HandlerEnv
-import xitrum.handler.outbound.XSendFile
+import xitrum.handler.inbound.Dispatcher
 import jekytrum.Config
-import jekytrum.action.EntryLayout
-import jekytrum.model.Entry404
+import jekytrum.action.NotFoundError
 
 object ErrorEntry {
   val X_404_ENTRY = "X-404-entry"
@@ -52,7 +52,7 @@ class ErrorEntryInboundHandler extends SimpleChannelInboundHandler[HandlerEnv] {
     }
 
     val pathInfo = request.getUri.split('?')(0)
-    if (pathInfo.startsWith("/jekytrum/api")) {
+    if (pathInfo.startsWith("/jekytrum/api") || pathInfo == "/") {
       ctx.fireChannelRead(env)
       return
     }
@@ -62,6 +62,8 @@ class ErrorEntryInboundHandler extends SimpleChannelInboundHandler[HandlerEnv] {
         ctx.fireChannelRead(env)
       case None =>
         ErrorEntry.set404Entry(env, pathInfo, false)
+        env.pathParams = MMap("title" -> Seq(pathInfo.drop(1)))
+        Dispatcher.dispatch(classOf[NotFoundError], env)
         ctx.channel.writeAndFlush(env)
     }
   }
@@ -100,9 +102,7 @@ class ErrorEntryOutboundHandler extends ChannelOutboundHandlerAdapter {
       case Some(ErrorEntry.X_404_ENTRY) =>
         env.response.setStatus(NOT_FOUND)
         ErrorEntry.removeHeaders(env)
-        val da = classOf[DummyAction].newInstance()
-        da.apply(env)
-        da.dispatchWithFailsafe()
+        ctx.write(msg, promise)
       case Some(ErrorEntry.X_404_ENTRY_FROM_ACTION) =>
         env.response.setStatus(NOT_FOUND)
         ErrorEntry.removeHeaders(env)
@@ -116,13 +116,5 @@ class ErrorEntryOutboundHandler extends ChannelOutboundHandlerAdapter {
       case None =>
         ctx.write(msg, promise)
     }
-  }
-}
-
-class DummyAction extends EntryLayout {
-  def execute() {
-    val entry = new Entry404
-    at("entry") = entry
-    respondInlineView(entry.body)
   }
 }
