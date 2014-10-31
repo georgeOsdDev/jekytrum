@@ -8,13 +8,15 @@ on top of [Xitrum](http://xitrum-framework.github.io/).
 ## Philosophy
 
 * **Reactive**
+
   Jekytrum works reactive with source content.
   When markdown files are created/modified/deleted, Jekytrum converts markdown to html automatically.
   And created html will given an url without server restart.
   (Live reloading feature will be available soon)
 
 * **Hackable**
-  You can use any custome converter as you like.
+
+  You can use or create any custom converter as you like.
   There are 4 default converter based on [Scalamd](https://github.com/chirino/scalamd), [Pegdown](https://github.com/sirthias/pegdown), [GithubAPI](https://developer.github.com/v3/markdown/), and NonConverter.
   And you can use any custom theme as you like.
 
@@ -40,7 +42,7 @@ on top of [Xitrum](http://xitrum-framework.github.io/).
  * Dynamic conversion
  * Rebootless routing
  * Asynchronous built-in Http(s) server based on Xitrum on Netty
- * Keyword-Search with power of ElasticSearch
+ * Keyword-Search with power of Elasticsearch
 
 ## Todos
 
